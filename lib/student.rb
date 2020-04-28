@@ -15,6 +15,28 @@ class Student < InteractiveRecord
     table_info.collect {|column_hash| column_hash['name']}
   end
   
+  def self.find_by(attribute={})
+    query = <<~QRY
+      SELECT *
+      FROM #{table_name}
+      WHERE
+        #{attribute.keys()[0]} = '#{attribute[attribute.keys()[0]]}';
+    QRY
+    
+    DB[:conn].execute(query)
+  end
+  
+  def self.find_by_name(name)
+    query = <<~QRY
+      SELECT *
+      FROM #{table_name}
+      WHERE
+        name = '#{name}';
+    QRY
+    
+    DB[:conn].execute(query)
+  end
+  
   # pre-processing
   column_names.each {|col_name| attr_accessor col_name.to_sym}
   
@@ -33,7 +55,15 @@ class Student < InteractiveRecord
   end
   
   def save
+    sql = <<~SQL
+      INSERT INTO #{table_name_for_insert} (#{col_names_for_insert})
+      VALUES (#{values_for_insert});
+    SQL
     
+    DB[:conn].execute(sql) #, table_name_for_insert, col_names_for_insert, values_for_insert)
+    @id = DB[:conn].execute("SELECT last_insert_rowid() FROM #{table_name_for_insert}")[0][0]
+    
+    self
   end
   
   def table_name_for_insert
